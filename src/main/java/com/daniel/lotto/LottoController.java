@@ -2,6 +2,8 @@ package com.daniel.lotto;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -20,15 +22,13 @@ public class LottoController {
         return bucket;
     }
 
-    @GetMapping("/")
-    public String home() {
-        System.out.println("-------Generated Numbers--------");
-        var bucket = generateNumbers(10);
-        for(var number : bucket) {
-            System.out.println(number);
+    @GetMapping("/generate-lotto")
+    @ResponseBody
+    public String generateLotto(@RequestParam("id") String amount) {
+        try {
+            return generateNumbers(Integer.parseInt(amount)).toString();
+        } catch (NumberFormatException e) {
+            return "Wrong 'amount' parameter value:</br>" + amount;
         }
-        System.out.println("--------------------------------");
-
-        return "home";
     }
 }
