@@ -29,12 +29,39 @@ jobs:
           key: v1-dependencies-{{ checksum "pom.xml" }}
         
       # package into a jar
-      - run: mvn clean package
+      - run: mvn clean package spring-boot:repackage
+      - run: 
+          command: |
+            mkdir -p /tmp/jar-release
+            cp ./target/*.jar /tmp/jar-release/lotto.jar -v
 
-      # build and push docker image to docker hub
-      - run: mvn clean compile
+      # Persist the specified paths (workspace/echo-output) into the workspace for use in downstream job. 
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is 
+          # taken to be the root directory of the workspace.
+          root: /tmp/jar-release
+          # Must be relative path from root
+          paths:
+            - lotto.jar
 
-      # store raw contents of src code
-      - store_artifacts:
-          path: target/classes
-          destination: lotto-api
+  publish-github-release:
+    docker:
+      - image: cibuilds/github:0.10
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+          
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            CREATION_DATE=$(date +%F_%T)
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -b "Creation $CREATION_DATE" -delete latest /tmp/workspace/
+            
+workflows:
+  version: 2
+  workflow:
+    jobs:
+    - build
+    - publish-github-release:
+        requires:
+          - build
