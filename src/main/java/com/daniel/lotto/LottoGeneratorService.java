@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class LottoGeneratorService {
+
     private Random random = new Random(System.currentTimeMillis());
 
     public ArrayList<Integer> generateNumbers(int amountOfNumbers) {

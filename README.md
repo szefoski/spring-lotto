@@ -8,8 +8,17 @@ Last build: [![CircleCI](https://circleci.com/gh/szefoski/spring-lotto.svg?style
 This application generates Lotto numbers (from 1 to 49) and do some other silly stuff.
 
 ## Usage
-* http://localhost:8080/generate-lotto?id=6
-* http://localhost:8080/generate-lotto?id=12311
+#### Generate Lotto numbers where, {number} is a integer parameter how many will be generated
+* http://localhost:8080/generate-lotto?number={number}
 * http://localhost:8080/generate/{number}
+
+#### Some silly generator, {name} is a String, put your name
 * http://localhost:8080/welcome/{name}
-* curl --header "Content-Type: application/json" --request POST --data '[13,8,19,3,45,33]' http://localhost:8080/check-wins/
+
+#### It download Duzy Lotek archived games and provides in JSON format
+* http://localhost:8080/games-archive/
+
+#### Checks if given numbers won in the past and return all matches
+```bash
+curl --header "Content-Type: application/json" --request POST --data '[2,3,4,11,17,18]' http://localhost:8080/check-wins/
+```
