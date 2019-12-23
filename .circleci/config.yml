@@ -1,67 +1,96 @@
-version: 2
+version: 2.1
+commands:
+  set-docker-tag:
+    description: "A very simple command for setting Docker Tag"
+    steps:
+      - run:
+          name: Update PATH and Define Environment Variable at Runtime
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              echo 'export DOCKER_TAG=master' >> $BASH_ENV
+              echo 'export DOCKER_APP_PORT=8080' >> $BASH_ENV
+            elif [ "${CIRCLE_BRANCH}" == "develop" ]; then
+              echo 'export DOCKER_TAG=develop' >> $BASH_ENV
+              echo 'export DOCKER_APP_PORT=8081' >> $BASH_ENV
+            else
+              echo 'export DOCKER_TAG=feature' >> $BASH_ENV
+              echo 'export DOCKER_APP_PORT=8082' >> $BASH_ENV
+            fi
+            source $BASH_ENV
+      
 jobs:
-  build:
+  build-and-docker-publish:
     docker:
       - image: circleci/openjdk:11.0.1-jdk
-
     working_directory: ~/repo
-    
     environment:
       # Customize the JVM maximum heap limit
       MAVEN_OPTS: -Xmx3200m
-    
     steps:
       # git pull
       - checkout
-           
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "pom.xml" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
       - run: mvn dependency:go-offline
-
-      - save_cache:
-          paths:
-            - ~/.m2
-          key: v1-dependencies-{{ checksum "pom.xml" }}
-        
-      # package into a jar
+      - set-docker-tag
+      - run: mvn clean compile com.google.cloud.tools:jib-maven-plugin:build -Dimage=szefoski/lotto:$DOCKER_TAG -Djib.to.auth.username=$DOCKER_USER -Djib.to.auth.password=$DOCKER_PASS
+  
+  
+  build-jar:
+    docker:
+      - image: circleci/openjdk:11.0.1-jdk
+    working_directory: ~/repo
+    environment:
+      # Customize the JVM maximum heap limit
+      MAVEN_OPTS: -Xmx3200m
+    steps:
+      # git pull
+      - checkout
+      - run: mvn dependency:go-offline
       - run: mvn clean package spring-boot:repackage
-      - run: 
+      - run:
           command: |
             mkdir -p /tmp/jar-release
             cp ./target/*.jar /tmp/jar-release/lotto.jar -v
-
-      # Persist the specified paths (workspace/echo-output) into the workspace for use in downstream job. 
       - persist_to_workspace:
-          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is 
-          # taken to be the root directory of the workspace.
           root: /tmp/jar-release
-          # Must be relative path from root
           paths:
             - lotto.jar
-
+            
   publish-github-release:
     docker:
       - image: cibuilds/github:0.10
     steps:
       - attach_workspace:
           at: /tmp/workspace
-          
+      - set-docker-tag
       - run:
           name: "Publish Release on GitHub"
           command: |
             CREATION_DATE=$(date +%F_%T)
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -b "Creation $CREATION_DATE" -delete latest /tmp/workspace/
-            
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -b "Creation $CREATION_DATE" -delete $DOCKER_TAG /tmp/workspace/
+  deploy-job:
+    machine:
+      enabled: true
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "9f:97:60:b8:84:4b:4f:71:9e:cf:da:0c:7b:c0:4c:04"
+      - set-docker-tag
+      - run: ssh-keyscan -H $DEPLOY_SERVER_IP >> ~/.ssh/known_hosts
+      - run: ssh $DEPLOY_SERVER_LOGIN@$DEPLOY_SERVER_IP "docker stop $DOCKER_TAG || true"
+      - run: ssh $DEPLOY_SERVER_LOGIN@$DEPLOY_SERVER_IP "docker rm $DOCKER_TAG || true"
+      - run: ssh $DEPLOY_SERVER_LOGIN@$DEPLOY_SERVER_IP "docker pull szefoski/lotto:$DOCKER_TAG"
+      - run: ssh $DEPLOY_SERVER_LOGIN@$DEPLOY_SERVER_IP "docker run -it -d -p $DOCKER_APP_PORT:8080 --restart always --name $DOCKER_TAG szefoski/lotto:$DOCKER_TAG"
+
 workflows:
-  version: 2
+  version: 2.1
   workflow:
     jobs:
-    - build
-    - publish-github-release:
-        requires:
-          - build
+      - build-and-docker-publish
+      - build-jar
+      - publish-github-release:
+          requires:
+            - build-jar
+      - deploy-job:
+          requires:
+            - build-and-docker-publish
+            
