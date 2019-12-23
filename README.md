@@ -9,13 +9,17 @@ This application generates Lotto numbers (from 1 to 49) and do some other silly 
 
 ## Usage
 #### Generate Lotto numbers where, {number} is a integer parameter how many will be generated
+* http://server438791.nazwa.pl:8080/generate-lotto?number={number}
 * http://localhost:8080/generate-lotto?number={number}
+* http://server438791.nazwa.pl:8080/generate/{number}
 * http://localhost:8080/generate/{number}
 
 #### Some silly generator, {name} is a String, put your name
+* http://server438791.nazwa.pl:8080/welcome/{name}
 * http://localhost:8080/welcome/{name}
 
 #### It download Duzy Lotek archived games and provides in JSON format
+* http://server438791.nazwa.pl:8080/games-archive/
 * http://localhost:8080/games-archive/
 
 #### Checks if given numbers won in the past and return all matches
