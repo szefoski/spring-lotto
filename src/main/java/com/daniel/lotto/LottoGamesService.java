@@ -2,30 +2,43 @@ package com.daniel.lotto;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @Service
 public class LottoGamesService {
 
-    private ArrayList<LottoResultModel> allGamesResultsCache;
+    private static final String GAMES_ARCHIVE_LINK = "http://www.mbnet.com.pl/dl.txt";
 
-    private ArrayList<LottoResultModel> downloadAllGamesResults() {
+    @Autowired
+    CacheManager cacheManager;
+
+    @Cacheable("games-archive")
+    public ArrayList<LottoResultModel> getAllGames() {
+        System.out.println("Download games archive");
+        return parseGamesArchive(downloadAllGamesResults());
+    }
+
+    ArrayList<LottoResultModel> parseGamesArchive(BufferedReader r) {
         var allGames = new ArrayList<LottoResultModel>();
+        var pattern = Pattern.compile(",");
 
         try {
-            var r = new BufferedReader(new InputStreamReader(
-                    new BufferedInputStream(new URL("http://www.mbnet.com.pl/dl.txt").openStream())));
-
-            var pattern = Pattern.compile(",");
-
             String line;
             while ((line = r.readLine()) != null) {
                 var parts = line.split(" ");
@@ -39,7 +52,7 @@ public class LottoGamesService {
                 LottoResultModel game = new LottoResultModel(numbers, date, drawNo);
                 allGames.add(game);
             }
-
+            r.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -47,12 +60,33 @@ public class LottoGamesService {
         return allGames;
     }
 
-    public ArrayList<LottoResultModel> getAllGames() {
-        if (allGamesResultsCache == null) {
-            allGamesResultsCache = downloadAllGamesResults();
+    BufferedReader downloadAllGamesResults() {
+        try {
+            return new BufferedReader(
+                    new InputStreamReader(new BufferedInputStream(new URL(GAMES_ARCHIVE_LINK).openStream())));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        return allGamesResultsCache;
+        return null;
+    }
+
+    public long getDateGamesArchiveOnServer() {
+        long time = 0;
+
+        try {
+            var url = new URL(GAMES_ARCHIVE_LINK);
+            time = url.openConnection().getLastModified();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return time;
+    }
+
+    public void evictAllCacheValues() {
+        System.out.println("clear archive");
+        cacheManager.getCache("games-archive").clear();
     }
 
     public ArrayList<LottoResultModel> getMatchGames(ArrayList<Integer> numbers) {
