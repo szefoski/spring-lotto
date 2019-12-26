@@ -2,23 +2,19 @@ package com.daniel.lotto;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.scheduling.annotation.Scheduled;
 
 @Service
 public class LottoGamesService {
@@ -36,7 +32,7 @@ public class LottoGamesService {
 
     ArrayList<LottoResultModel> parseGamesArchive(BufferedReader r) {
         var allGames = new ArrayList<LottoResultModel>();
-        var pattern = Pattern.compile(",");
+        final var pattern = Pattern.compile(",");
 
         try {
             String line;
@@ -67,11 +63,10 @@ public class LottoGamesService {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         return null;
     }
 
-    public long getDateGamesArchiveOnServer() {
+    public long getModifyTimeArchiveOnServer() {
         long time = 0;
 
         try {
@@ -84,9 +79,9 @@ public class LottoGamesService {
         return time;
     }
 
+    @CacheEvict(value = "games-archive", allEntries = true)
     public void evictAllCacheValues() {
         System.out.println("clear archive");
-        cacheManager.getCache("games-archive").clear();
     }
 
     public ArrayList<LottoResultModel> getMatchGames(ArrayList<Integer> numbers) {

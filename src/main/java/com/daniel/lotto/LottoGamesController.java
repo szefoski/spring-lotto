@@ -1,5 +1,6 @@
 package com.daniel.lotto;
 
+import java.time.Duration;
 import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,14 +12,15 @@ public class LottoGamesController {
     @Autowired
     LottoGamesService lottoGamesService;
 
-    long archiveLastUpdateCheck = 0;
-    long archiveModifyTimeDownloaded = 0;
+    private long archiveLastUpdateCheck = 0;
+    private long modifyTimeDownloadedArchive = 0;
+    private static final Duration CACHE_EXPIRE_TIME = Duration.ofMinutes(30);
 
     public ArrayList<LottoResultModel> getAllGames() {
-        if (System.currentTimeMillis() - archiveLastUpdateCheck > 1000 * 20) {
+        if (System.currentTimeMillis() - archiveLastUpdateCheck > CACHE_EXPIRE_TIME.toMillis()) {
             archiveLastUpdateCheck = System.currentTimeMillis();
-            if (lottoGamesService.getDateGamesArchiveOnServer() != archiveModifyTimeDownloaded) {
-                archiveModifyTimeDownloaded = lottoGamesService.getDateGamesArchiveOnServer();
+            if (lottoGamesService.getModifyTimeArchiveOnServer() != modifyTimeDownloadedArchive) {
+                modifyTimeDownloadedArchive = lottoGamesService.getModifyTimeArchiveOnServer();
                 lottoGamesService.evictAllCacheValues();
             }
         }
