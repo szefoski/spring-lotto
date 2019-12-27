@@ -48,43 +48,37 @@ public class LottoGamesArchiveService {
         }
     }
 
-    Collection<LottoResultModel> getLatestGamesArchive() throws IOException {
+    private Collection<LottoResultModel> getLatestGamesArchive() throws IOException {
         System.out.println("Download games archive");
-        var r = new BufferedReader(
+
+        var bufferedFile = new BufferedReader(
                 new InputStreamReader(new BufferedInputStream(new URL(GAMES_ARCHIVE_LINK).openStream())));
         var allGames = new ArrayList<LottoResultModel>();
-        final var pattern = Pattern.compile(",");
-
+        var pattern = Pattern.compile(",");
         modifyTimeCachedArchive = getModifyTimeOfArchiveOnServer();
+
         String line;
-        while ((line = r.readLine()) != null) {
-            var parts = line.split(" ");
-
-            var stringDrawNo = parts[LineSections.GAME_NUMBER.getValue()].substring(0, parts[LineSections.GAME_NUMBER.getValue()].length() - 1);
-            var drawNo = Integer.valueOf(stringDrawNo);
-            var date = parts[LineSections.GAME_DATE.getValue()];
-            List<Integer> numbers = pattern.splitAsStream(parts[LineSections.GAME_RESULTS.getValue()]).map(Integer::valueOf)
-                    .collect(Collectors.toList());
-
-            var game = new LottoResultModel(numbers, date, drawNo);
-            allGames.add(game);
+        while ((line = bufferedFile.readLine()) != null) {
+            allGames.add(parseLine(line, pattern));
         }
-        r.close();
 
+        bufferedFile.close();
         return Collections.unmodifiableCollection(allGames);
     }
 
-    long getModifyTimeOfArchiveOnServer() {
-        long time = 0;
+    private LottoResultModel parseLine(String line, Pattern pattern) {
+        var parts = line.split(" ");
+        var stringDrawNo = parts[LineSections.GAME_NUMBER.getValue()].substring(0, parts[LineSections.GAME_NUMBER.getValue()].length() - 1);
+        var drawNo = Integer.valueOf(stringDrawNo);
+        var date = parts[LineSections.GAME_DATE.getValue()];
+        List<Integer> numbers = pattern.splitAsStream(parts[LineSections.GAME_RESULTS.getValue()]).map(Integer::valueOf)
+                .collect(Collectors.toList());
 
-        try {
-            var url = new URL(GAMES_ARCHIVE_LINK);
-            time = url.openConnection().getLastModified();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        return new LottoResultModel(numbers, date, drawNo);
+    }
 
-        return time;
+    long getModifyTimeOfArchiveOnServer() throws IOException {
+        return new URL(GAMES_ARCHIVE_LINK).openConnection().getLastModified();
     }
 
     long getModifyTimeOfCachedArchive() {

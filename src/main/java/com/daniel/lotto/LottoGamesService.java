@@ -1,9 +1,9 @@
 package com.daniel.lotto;
 
+import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 public class LottoGamesService {
 
     @Autowired
-    LottoGamesArchiveService lottoGamesArchiveService;
+    private LottoGamesArchiveService lottoGamesArchiveService;
 
     private long archiveLastUpdateCheck = 0;
     private static final Duration CACHE_EXPIRE_TIME = Duration.ofMinutes(30);
@@ -21,23 +21,21 @@ public class LottoGamesService {
         var currentTime = System.currentTimeMillis();
 
         if (currentTime - archiveLastUpdateCheck > CACHE_EXPIRE_TIME.toMillis()) {
-            archiveLastUpdateCheck = currentTime;
-            if (lottoGamesArchiveService.getModifyTimeOfCachedArchive() != lottoGamesArchiveService.getModifyTimeOfArchiveOnServer()) {
+            try {
+                if (lottoGamesArchiveService.getModifyTimeOfCachedArchive() != lottoGamesArchiveService.getModifyTimeOfArchiveOnServer()) {
+                    lottoGamesArchiveService.evictAllCacheValues();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
                 lottoGamesArchiveService.evictAllCacheValues();
+            } finally {
+                archiveLastUpdateCheck = currentTime;
             }
         }
         return lottoGamesArchiveService.getAllGames();
     }
 
     public Collection<LottoResultModel> getMatchGames(Collection<Integer> numbers) {
-        var wonGames = new ArrayList<LottoResultModel>();
-
-        for (var game : getAllGames()) {
-            if (game.getNumbers().containsAll(numbers)) {
-                wonGames.add(game);
-            }
-        }
-
-        return Collections.unmodifiableCollection(wonGames);
+        return getAllGames().parallelStream().filter(game -> game.getNumbers().containsAll(numbers)).collect(Collectors.toUnmodifiableList());
     }
 }
