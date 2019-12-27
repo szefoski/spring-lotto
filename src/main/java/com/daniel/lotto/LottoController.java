@@ -21,7 +21,7 @@ public class LottoController {
     private LottoGeneratorService generatorService;
 
     @Autowired
-    private LottoGamesController gamesController;
+    private LottoGamesService gamesController;
 
     @GetMapping("/generate-lotto")
     public String generateLotto(@RequestParam("number") String amount) {
