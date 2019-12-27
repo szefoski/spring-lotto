@@ -1,69 +1,41 @@
 package com.daniel.lotto;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
+import java.time.Duration;
+import java.util.Collection;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class LottoGamesService {
 
-    private ArrayList<LottoResultModel> allGamesResultsCache;
+    @Autowired
+    private LottoGamesArchiveService lottoGamesArchiveService;
 
-    private ArrayList<LottoResultModel> downloadAllGamesResults() {
-        var allGames = new ArrayList<LottoResultModel>();
+    private long archiveLastUpdateCheck = 0;
+    private static final Duration CACHE_EXPIRE_TIME = Duration.ofMinutes(30);
 
-        try {
-            var r = new BufferedReader(new InputStreamReader(
-                    new BufferedInputStream(new URL("http://www.mbnet.com.pl/dl.txt").openStream())));
+    public Collection<LottoGameDataModel> getAllGames() {
+        var currentTime = System.currentTimeMillis();
 
-            var pattern = Pattern.compile(",");
-
-            String line;
-            while ((line = r.readLine()) != null) {
-                var parts = line.split(" ");
-
-                var stringDrawNo = parts[0].substring(0, parts[0].length() - 1);
-                var drawNo = Integer.valueOf(stringDrawNo);
-                var date = parts[1];
-                List<Integer> numbers = pattern.splitAsStream(parts[2]).map(Integer::valueOf)
-                        .collect(Collectors.toList());
-
-                LottoResultModel game = new LottoResultModel(numbers, date, drawNo);
-                allGames.add(game);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return allGames;
-    }
-
-    public ArrayList<LottoResultModel> getAllGames() {
-        if (allGamesResultsCache == null) {
-            allGamesResultsCache = downloadAllGamesResults();
-        }
-
-        return allGamesResultsCache;
-    }
-
-    public ArrayList<LottoResultModel> getMatchGames(ArrayList<Integer> numbers) {
-        var wonGames = new ArrayList<LottoResultModel>();
-
-        for (var game : getAllGames()) {
-            if (game.getNumbers().containsAll(numbers)) {
-                wonGames.add(game);
+        if (currentTime - archiveLastUpdateCheck > CACHE_EXPIRE_TIME.toMillis()) {
+            try {
+                if (lottoGamesArchiveService.getModifyTimeOfCachedArchive() != lottoGamesArchiveService.getModifyTimeOfArchiveOnServer()) {
+                    lottoGamesArchiveService.evictAllCacheValues();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                lottoGamesArchiveService.evictAllCacheValues();
+            } finally {
+                archiveLastUpdateCheck = currentTime;
             }
         }
+        return lottoGamesArchiveService.getAllGames();
+    }
 
-        return wonGames;
+    public Collection<LottoGameDataModel> getMatchGames(Collection<Integer> numbers) {
+        return getAllGames().parallelStream().filter(game -> game.getNumbers().containsAll(numbers)).collect(Collectors.toUnmodifiableList());
     }
 }

@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class LottoResultModel {
+public class LottoGameDataModel {
 
     private final List<Integer> numbers;
     private final String date;

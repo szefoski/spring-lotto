@@ -21,7 +21,7 @@ public class LottoController {
     private LottoGeneratorService generatorService;
 
     @Autowired
-    private LottoGamesService gamesService;
+    private LottoGamesService gamesController;
 
     @GetMapping("/generate-lotto")
     public String generateLotto(@RequestParam("number") String amount) {
@@ -47,11 +47,11 @@ public class LottoController {
 
 	@RequestMapping(value = "/check-wins/", method = RequestMethod.POST)
 	public ResponseEntity<?> checkWins(@RequestBody ArrayList<Integer> numbers) {
-		return new ResponseEntity<>(gamesService.getMatchGames(numbers), HttpStatus.OK);
+		return new ResponseEntity<>(gamesController.getMatchGames(numbers), HttpStatus.OK);
     }
 
     @GetMapping("/games-archive/")
     public ResponseEntity<?> games() {
-		return new ResponseEntity<>(gamesService.getAllGames(), HttpStatus.OK);
+		return new ResponseEntity<>(gamesController.getAllGames(), HttpStatus.OK);
     }
 }
