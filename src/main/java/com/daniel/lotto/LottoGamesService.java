@@ -17,7 +17,7 @@ public class LottoGamesService {
     private long archiveLastUpdateCheck = 0;
     private static final Duration CACHE_EXPIRE_TIME = Duration.ofMinutes(30);
 
-    public Collection<LottoResultModel> getAllGames() {
+    public Collection<LottoGameDataModel> getAllGames() {
         var currentTime = System.currentTimeMillis();
 
         if (currentTime - archiveLastUpdateCheck > CACHE_EXPIRE_TIME.toMillis()) {
@@ -35,7 +35,7 @@ public class LottoGamesService {
         return lottoGamesArchiveService.getAllGames();
     }
 
-    public Collection<LottoResultModel> getMatchGames(Collection<Integer> numbers) {
+    public Collection<LottoGameDataModel> getMatchGames(Collection<Integer> numbers) {
         return getAllGames().parallelStream().filter(game -> game.getNumbers().containsAll(numbers)).collect(Collectors.toUnmodifiableList());
     }
 }

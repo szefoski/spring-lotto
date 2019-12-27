@@ -39,7 +39,7 @@ public class LottoGamesArchiveService {
     }
 
     @Cacheable(value = "games-archive", unless="#result.size() == 0")
-    public Collection<LottoResultModel> getAllGames() {
+    public Collection<LottoGameDataModel> getAllGames() {
         try {
             return getLatestGamesArchive();
         } catch (IOException e) {
@@ -48,12 +48,12 @@ public class LottoGamesArchiveService {
         }
     }
 
-    private Collection<LottoResultModel> getLatestGamesArchive() throws IOException {
+    private Collection<LottoGameDataModel> getLatestGamesArchive() throws IOException {
         System.out.println("Download games archive");
 
         var bufferedFile = new BufferedReader(
                 new InputStreamReader(new BufferedInputStream(new URL(GAMES_ARCHIVE_LINK).openStream())));
-        var allGames = new ArrayList<LottoResultModel>();
+        var allGames = new ArrayList<LottoGameDataModel>();
         var pattern = Pattern.compile(",");
         modifyTimeCachedArchive = getModifyTimeOfArchiveOnServer();
 
@@ -66,7 +66,7 @@ public class LottoGamesArchiveService {
         return Collections.unmodifiableCollection(allGames);
     }
 
-    private LottoResultModel parseLine(String line, Pattern pattern) {
+    private LottoGameDataModel parseLine(String line, Pattern pattern) {
         var parts = line.split(" ");
         var stringDrawNo = parts[LineSections.GAME_NUMBER.getValue()].substring(0, parts[LineSections.GAME_NUMBER.getValue()].length() - 1);
         var drawNo = Integer.valueOf(stringDrawNo);
@@ -74,7 +74,7 @@ public class LottoGamesArchiveService {
         List<Integer> numbers = pattern.splitAsStream(parts[LineSections.GAME_RESULTS.getValue()]).map(Integer::valueOf)
                 .collect(Collectors.toList());
 
-        return new LottoResultModel(numbers, date, drawNo);
+        return new LottoGameDataModel(numbers, date, drawNo);
     }
 
     long getModifyTimeOfArchiveOnServer() throws IOException {
