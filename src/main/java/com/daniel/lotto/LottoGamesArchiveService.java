@@ -1,5 +1,9 @@
 package com.daniel.lotto;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,57 +16,46 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.stereotype.Service;
-import org.springframework.cache.annotation.Cacheable;
-
 @Service
 public class LottoGamesArchiveService {
 
     private static final String GAMES_ARCHIVE_LINK = "http://www.mbnet.com.pl/dl.txt";
     private long modifyTimeCachedArchive = 0;
 
-    @Cacheable("games-archive")
+    @Cacheable(value = "games-archive", unless="#result.size() == 0")
     public Collection<LottoResultModel> getAllGames() {
-        System.out.println("Download games archive");
-        return parseGamesArchive(downloadAllGamesResults());
+        try {
+            return getLatestGamesArchive();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
-    Collection<LottoResultModel> parseGamesArchive(BufferedReader r) {
+    Collection<LottoResultModel> getLatestGamesArchive() throws IOException {
+        System.out.println("Download games archive");
+        var r = new BufferedReader(
+                new InputStreamReader(new BufferedInputStream(new URL(GAMES_ARCHIVE_LINK).openStream())));
         var allGames = new ArrayList<LottoResultModel>();
         final var pattern = Pattern.compile(",");
 
-        try {
-            modifyTimeCachedArchive = new URL(GAMES_ARCHIVE_LINK).openConnection().getLastModified();
-            String line;
-            while ((line = r.readLine()) != null) {
-                var parts = line.split(" ");
+        modifyTimeCachedArchive = new URL(GAMES_ARCHIVE_LINK).openConnection().getLastModified();
+        String line;
+        while ((line = r.readLine()) != null) {
+            var parts = line.split(" ");
 
-                var stringDrawNo = parts[0].substring(0, parts[0].length() - 1);
-                var drawNo = Integer.valueOf(stringDrawNo);
-                var date = parts[1];
-                List<Integer> numbers = pattern.splitAsStream(parts[2]).map(Integer::valueOf)
-                        .collect(Collectors.toList());
+            var stringDrawNo = parts[0].substring(0, parts[0].length() - 1);
+            var drawNo = Integer.valueOf(stringDrawNo);
+            var date = parts[1];
+            List<Integer> numbers = pattern.splitAsStream(parts[2]).map(Integer::valueOf)
+                    .collect(Collectors.toList());
 
-                LottoResultModel game = new LottoResultModel(numbers, date, drawNo);
-                allGames.add(game);
-            }
-            r.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            var game = new LottoResultModel(numbers, date, drawNo);
+            allGames.add(game);
         }
+        r.close();
 
         return Collections.unmodifiableCollection(allGames);
-    }
-
-    BufferedReader downloadAllGamesResults() {
-        try {
-            return new BufferedReader(
-                    new InputStreamReader(new BufferedInputStream(new URL(GAMES_ARCHIVE_LINK).openStream())));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     long getModifyTimeOfArchiveOnServer() {
