@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -18,18 +20,20 @@ import org.springframework.cache.annotation.Cacheable;
 public class LottoGamesArchiveService {
 
     private static final String GAMES_ARCHIVE_LINK = "http://www.mbnet.com.pl/dl.txt";
+    private long modifyTimeCachedArchive = 0;
 
     @Cacheable("games-archive")
-    public ArrayList<LottoResultModel> getAllGames() {
+    public Collection<LottoResultModel> getAllGames() {
         System.out.println("Download games archive");
         return parseGamesArchive(downloadAllGamesResults());
     }
 
-    ArrayList<LottoResultModel> parseGamesArchive(BufferedReader r) {
+    Collection<LottoResultModel> parseGamesArchive(BufferedReader r) {
         var allGames = new ArrayList<LottoResultModel>();
         final var pattern = Pattern.compile(",");
 
         try {
+            modifyTimeCachedArchive = new URL(GAMES_ARCHIVE_LINK).openConnection().getLastModified();
             String line;
             while ((line = r.readLine()) != null) {
                 var parts = line.split(" ");
@@ -48,7 +52,7 @@ public class LottoGamesArchiveService {
             e.printStackTrace();
         }
 
-        return allGames;
+        return Collections.unmodifiableCollection(allGames);
     }
 
     BufferedReader downloadAllGamesResults() {
@@ -61,7 +65,7 @@ public class LottoGamesArchiveService {
         return null;
     }
 
-    long getModifyTimeArchiveOnServer() {
+    long getModifyTimeOfArchiveOnServer() {
         long time = 0;
 
         try {
@@ -74,20 +78,12 @@ public class LottoGamesArchiveService {
         return time;
     }
 
+    long getModifyTimeOfCachedArchive() {
+        return modifyTimeCachedArchive;
+    }
+
     @CacheEvict(value = "games-archive", allEntries = true)
     public void evictAllCacheValues() {
         System.out.println("clear archive");
-    }
-
-    ArrayList<LottoResultModel> getMatchGames(ArrayList<Integer> numbers) {
-        var wonGames = new ArrayList<LottoResultModel>();
-
-        for (var game : getAllGames()) {
-            if (game.getNumbers().containsAll(numbers)) {
-                wonGames.add(game);
-            }
-        }
-
-        return wonGames;
     }
 }
