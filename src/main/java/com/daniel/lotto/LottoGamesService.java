@@ -12,17 +12,12 @@ import java.util.stream.Collectors;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 
 @Service
 public class LottoGamesService {
 
     private static final String GAMES_ARCHIVE_LINK = "http://www.mbnet.com.pl/dl.txt";
-
-    @Autowired
-    CacheManager cacheManager;
 
     @Cacheable("games-archive")
     public ArrayList<LottoResultModel> getAllGames() {
@@ -66,7 +61,7 @@ public class LottoGamesService {
         return null;
     }
 
-    public long getModifyTimeArchiveOnServer() {
+    long getModifyTimeArchiveOnServer() {
         long time = 0;
 
         try {
@@ -84,7 +79,7 @@ public class LottoGamesService {
         System.out.println("clear archive");
     }
 
-    public ArrayList<LottoResultModel> getMatchGames(ArrayList<Integer> numbers) {
+    ArrayList<LottoResultModel> getMatchGames(ArrayList<Integer> numbers) {
         var wonGames = new ArrayList<LottoResultModel>();
 
         for (var game : getAllGames()) {
