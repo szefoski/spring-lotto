@@ -22,13 +22,29 @@ public class LottoGamesArchiveService {
     private static final String GAMES_ARCHIVE_LINK = "http://www.mbnet.com.pl/dl.txt";
     private long modifyTimeCachedArchive = 0;
 
+    private enum LineSections {
+        GAME_NUMBER(0),
+        GAME_DATE(1),
+        GAME_RESULTS(2);
+
+        private final int value;
+
+        LineSections(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
+
     @Cacheable(value = "games-archive", unless="#result.size() == 0")
     public Collection<LottoResultModel> getAllGames() {
         try {
             return getLatestGamesArchive();
         } catch (IOException e) {
             e.printStackTrace();
-            return new ArrayList<>();
+            return Collections.unmodifiableCollection(new ArrayList<>());
         }
     }
 
@@ -39,15 +55,15 @@ public class LottoGamesArchiveService {
         var allGames = new ArrayList<LottoResultModel>();
         final var pattern = Pattern.compile(",");
 
-        modifyTimeCachedArchive = new URL(GAMES_ARCHIVE_LINK).openConnection().getLastModified();
+        modifyTimeCachedArchive = getModifyTimeOfArchiveOnServer();
         String line;
         while ((line = r.readLine()) != null) {
             var parts = line.split(" ");
 
-            var stringDrawNo = parts[0].substring(0, parts[0].length() - 1);
+            var stringDrawNo = parts[LineSections.GAME_NUMBER.getValue()].substring(0, parts[LineSections.GAME_NUMBER.getValue()].length() - 1);
             var drawNo = Integer.valueOf(stringDrawNo);
-            var date = parts[1];
-            List<Integer> numbers = pattern.splitAsStream(parts[2]).map(Integer::valueOf)
+            var date = parts[LineSections.GAME_DATE.getValue()];
+            List<Integer> numbers = pattern.splitAsStream(parts[LineSections.GAME_RESULTS.getValue()]).map(Integer::valueOf)
                     .collect(Collectors.toList());
 
             var game = new LottoResultModel(numbers, date, drawNo);

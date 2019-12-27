@@ -22,7 +22,7 @@ public class LottoGamesService {
 
         if (currentTime - archiveLastUpdateCheck > CACHE_EXPIRE_TIME.toMillis()) {
             archiveLastUpdateCheck = currentTime;
-            if (lottoGamesArchiveService.getModifyTimeOfArchiveOnServer() != lottoGamesArchiveService.getModifyTimeOfCachedArchive()) {
+            if (lottoGamesArchiveService.getModifyTimeOfCachedArchive() != lottoGamesArchiveService.getModifyTimeOfArchiveOnServer()) {
                 lottoGamesArchiveService.evictAllCacheValues();
             }
         }
