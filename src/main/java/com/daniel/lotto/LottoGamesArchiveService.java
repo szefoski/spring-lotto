@@ -1,5 +1,6 @@
 package com.daniel.lotto;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class LottoGamesArchiveService {
 
@@ -49,7 +51,7 @@ public class LottoGamesArchiveService {
     }
 
     private Collection<LottoGameDataModel> getLatestGamesArchive() throws IOException {
-        System.out.println("Download games archive");
+        log.info("Download games archive");
 
         var bufferedFile = new BufferedReader(
                 new InputStreamReader(new BufferedInputStream(new URL(GAMES_ARCHIVE_LINK).openStream())));
@@ -87,6 +89,6 @@ public class LottoGamesArchiveService {
 
     @CacheEvict(value = "games-archive", allEntries = true)
     public void evictAllCacheValues() {
-        System.out.println("clear archive");
+        log.info("Clear cache: games-archive");
     }
 }
