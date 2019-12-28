@@ -45,9 +45,9 @@ public class LottoController {
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
-	@RequestMapping(value = "/check-wins/", method = RequestMethod.POST)
-	public ResponseEntity<?> checkWins(@RequestBody ArrayList<Integer> numbers) {
-		return new ResponseEntity<>(gamesController.getMatchGames(numbers), HttpStatus.OK);
+    @RequestMapping(value = "/check-wins/", method = RequestMethod.POST)
+    public ResponseEntity<?> checkWins(@RequestBody ArrayList<Integer> numbers) {
+        return new ResponseEntity<>(gamesController.getMatchGames(numbers), HttpStatus.OK);
     }
 
     @GetMapping("/games-archive/")
