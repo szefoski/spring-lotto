@@ -81,11 +81,21 @@ jobs:
       - run: ssh $DEPLOY_SERVER_LOGIN@$DEPLOY_SERVER_IP "docker pull szefoski/lotto:$DOCKER_TAG"
       - run: ssh $DEPLOY_SERVER_LOGIN@$DEPLOY_SERVER_IP "docker run -it -d -p $DOCKER_APP_PORT:8080 --restart always --name $DOCKER_TAG szefoski/lotto:$DOCKER_TAG"
 
+  build-sonar:
+    docker:
+      - image: 'circleci/openjdk:11-jdk'
+    steps:
+      - checkout
+      - run:
+          name: Analyze on SonarCloud
+          command: mvn verify sonar:sonar
+
 workflows:
   version: 2.1
   workflow:
     jobs:
       - build-and-docker-publish
+      - build-sonar
       - build-jar
       - publish-github-release:
           requires:
