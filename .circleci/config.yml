@@ -1,20 +1,20 @@
 version: 2.1
 commands:
   set-docker-tag:
-    description: "A very simple command for setting Docker Tag"
+    description: "Setup Docker ports on deploy server"
     steps:
       - run:
           name: Update PATH and Define Environment Variable at Runtime
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              echo 'export DOCKER_TAG=master' >> $BASH_ENV
-              echo 'export DOCKER_APP_PORT=8080' >> $BASH_ENV
+              echo "export DOCKER_TAG=$CIRCLE_PROJECT_REPONAME-master" >> $BASH_ENV
+              echo "export DOCKER_APP_PORT=8080" >> $BASH_ENV
             elif [ "${CIRCLE_BRANCH}" == "develop" ]; then
-              echo 'export DOCKER_TAG=develop' >> $BASH_ENV
-              echo 'export DOCKER_APP_PORT=8081' >> $BASH_ENV
+              echo "export DOCKER_TAG=$CIRCLE_PROJECT_REPONAME-develop" >> $BASH_ENV
+              echo "export DOCKER_APP_PORT=8081" >> $BASH_ENV
             else
-              echo 'export DOCKER_TAG=feature' >> $BASH_ENV
-              echo 'export DOCKER_APP_PORT=8082' >> $BASH_ENV
+              echo "export DOCKER_TAG=$CIRCLE_PROJECT_REPONAME-feature" >> $BASH_ENV
+              echo "export DOCKER_APP_PORT=8082" >> $BASH_ENV
             fi
             source $BASH_ENV
       
